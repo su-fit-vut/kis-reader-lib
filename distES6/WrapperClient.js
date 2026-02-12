@@ -21,12 +21,16 @@ export class KisReaderWrapperClient {
         this.disconnectedEvent = new TypedEvent();
         this.cardReadEvent = new TypedEvent();
         this.errorEvent = new TypedEvent();
+        this.warnEvent = new TypedEvent();
+        this.debugEvent = new TypedEvent();
         this.client = reader;
         this.exclusiveMode = exclusiveMode;
         this.client.connectedEvent.pipe(this.connectedEvent);
         this.client.reconnectingEvent.pipe(this.reconnectingEvent);
         this.client.disconnectedEvent.pipe(this.disconnectedEvent);
         this.client.errorEvent.pipe(this.errorEvent);
+        this.client.warnEvent.pipe(this.warnEvent);
+        this.client.debugEvent.pipe(this.debugEvent);
         this.client.disconnectedEvent.on(() => this.state = ReaderState.ST_DISCONNECTED);
         this.client.errorEvent.on(args => this.state = args.client.getState());
         if (this.client.state == ReaderState.ST_DISCONNECTED) {
@@ -42,8 +46,12 @@ export class KisReaderWrapperClient {
             this.client.modeAutoRead();
             this.connectedEvent.emit(this);
         }
+        else if (this.client.state == ReaderState.ST_AUTO_READ) {
+            this.state = ReaderState.ST_IDLE;
+            this.connectedEvent.emit(this);
+        }
         else {
-            throw new Error("The passed reader is not in compatible state (ST_DISCONNECTED / ST_IDLE)");
+            throw new Error("The passed reader is not in compatible state (ST_DISCONNECTED / ST_IDLE / ST_AUTO_READ)");
         }
     }
     connect() {
@@ -67,8 +75,7 @@ export class KisReaderWrapperClient {
             this.exclusiveOldEvent = this.client.cardReadEvent;
             this.client.cardReadEvent = new TypedEvent();
         }
-        else
-            this.client.cardReadEvent.on(this.fireCardEventListener);
+        this.client.cardReadEvent.on(this.fireCardEventListener);
         this.state = ReaderState.ST_AUTO_READ;
     }
     modeSingleRead() {

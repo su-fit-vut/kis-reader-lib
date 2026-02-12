@@ -19,6 +19,8 @@
 	},
 	"scripts": {
 		"build": "tsc -b && sh fix-es6-imports.sh",
+		"dev": "sh dev.sh",
+		"run": "npm run build && node distES6/harness.js",
 		"clean": "rm -r distES6 dist distNode",
 		"ncc-onefile": "ncc build src/lib.ts -o distNode/bundle/ -C -m -s --no-source-map-register",
 		"brow-onefile": "tsc -b commonjs.tsconfig.json && browserify dist/lib.js -s KISReaderLib -o dist/bundle/bundle-lib.js",
@@ -26,9 +28,11 @@
 		"brow-clean": "tsc -b commonjs.tsconfig.json --clean"
 	},
 	"devDependencies": {
+		"@types/node": "^20.19.33",
 		"@zeit/ncc": "0.22.1",
 		"browserify": "^16.5.1",
-		"typescript": "^3.2.2",
+		"typescript": "^5.9.3",
+		"undici-types": "^7.21.0",
 		"ws": "7.2.3"
 	}
 }

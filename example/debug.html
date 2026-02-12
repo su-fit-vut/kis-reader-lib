@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIS Reader Debug Console</title>
+    
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Console</h1>
+        
+        <div class="section">
+            <h2>Connection</h2>
+            <div id="statusBadge" class="status-badge status-disconnected">
+                Disconnected
+            </div>
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="wsUrl" 
+                    placeholder="Enter WebSocket URL"
+                    value="wss://localhost"
+                />
+                <button id="connectBtn" class="btn-primary">Connect</button>
+                <button id="disconnectBtn" class="btn-secondary" disabled>Disconnect</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Actions</h2>
+            <div class="action-buttons">
+                <button id="singleReadBtn" class="btn-success" disabled>Single Read</button>
+                <button id="autoReadBtn" class="btn-success" disabled>Auto Read Mode</button>
+                <button id="idleBtn" class="btn-secondary" disabled>Idle Mode</button>
+                <button id="clearLogBtn" class="btn-secondary">Clear Log</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Card Data</h2>
+            <div id="cardData" class="card-data">
+                <div class="card-data-label">Card Data Read:</div>
+                <div class="card-data-value" id="cardDataValue"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Debug Log</h2>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { KisReaderClient } from '../distES6/Client.js';
+
+        let client = null;
+        const wsUrlInput = document.getElementById('wsUrl');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const singleReadBtn = document.getElementById('singleReadBtn');
+        const autoReadBtn = document.getElementById('autoReadBtn');
+        const idleBtn = document.getElementById('idleBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const logDiv = document.getElementById('log');
+        const cardDataDiv = document.getElementById('cardData');
+        const cardDataValue = document.getElementById('cardDataValue');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            if (connected) {
+                statusBadge.className = 'status-badge status-connected';
+                statusBadge.textContent = 'Connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                singleReadBtn.disabled = false;
+                autoReadBtn.disabled = false;
+                idleBtn.disabled = false;
+                wsUrlInput.disabled = true;
+            } else {
+                statusBadge.className = 'status-badge status-disconnected';
+                statusBadge.textContent = 'Disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                singleReadBtn.disabled = true;
+                autoReadBtn.disabled = true;
+                idleBtn.disabled = true;
+                wsUrlInput.disabled = false;
+            }
+        }
+
+        connectBtn.addEventListener('click', () => {
+            const url = wsUrlInput.value.trim();
+            if (!url) {
+                log('Please enter a WebSocket URL', 'error');
+                return;
+            }
+
+            log(`Connecting to ${url}...`, 'info');
+            client = new KisReaderClient(url);
+
+            client.connectedEvent.once(() => {
+                log('Connected successfully!', 'success');
+                updateStatus(true);
+            });
+
+            client.cardReadEvent.on(event => {
+                log('Card data received', 'success');
+                cardDataValue.textContent = event.cardData;
+                cardDataDiv.classList.add('show');
+            });
+
+            client.errorEvent.on(event => {
+                log(`Error: ${event.error.message}`, 'error');
+            });
+
+            client.disconnectedEvent.on(() => {
+                log('Disconnected', 'warn');
+                updateStatus(false);
+            });
+
+            client.reconnectingEvent.on(() => {
+                log('Attempting to reconnect...', 'warn');
+            });
+
+            client.warnEvent.on(event => {
+                log(`Warning: ${event.msg}`, 'warn');
+            });
+
+            client.debugEvent.on(event => {
+                log(`Debug: ${event.msg}`, 'info');
+            });
+
+            client.connect();
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            if (client) {
+                log('Disconnecting...', 'info');
+                client.disconnect();
+                client = null;
+                updateStatus(false);
+            }
+        });
+
+        singleReadBtn.addEventListener('click', () => {
+            if (client && client.isReady()) {
+                log('Triggering single read mode...', 'info');
+                client.modeSingleRead();
+            }
+        });
+
+        autoReadBtn.addEventListener('click', () => {
+            if (client && client.isReady()) {
+                log('Enabling auto read mode...', 'info');
+                client.modeAutoReadBegin();
+            }
+        });
+
+        idleBtn.addEventListener('click', () => {
+            if (client && client.isReady()) {
+                log('Setting to idle mode...', 'info');
+                client.modeIdle();
+            }
+        });
+
+        clearLogBtn.addEventListener('click', () => {
+            logDiv.innerHTML = '';
+            log('Log cleared', 'info');
+        });
+
+        updateStatus(false);
+        log('KIS Reader Debug Console ready', 'success');
+    </script>
+</body>
+</html>

@@ -19,6 +19,17 @@ export declare class KisReaderClient implements IKisReaderClient {
         client: IKisReaderClient;
         error: ReaderError | SocketError;
     }>;
+    warnEvent: TypedEvent<{
+        client: IKisReaderClient;
+        msg: string;
+        data: any[];
+    }>;
+    debugEvent: TypedEvent<{
+        client: IKisReaderClient;
+        msg: string;
+        data: any[];
+    }>;
+    loggingLevel: number;
     pingEnabled: boolean;
     pingInterval: number;
     pingTimeout: number;
@@ -28,7 +39,8 @@ export declare class KisReaderClient implements IKisReaderClient {
     reconnectDelay: number;
     reconnectLimit: number;
     lastKnownState: ReaderState;
-    constructor(url: string);
+    constructor(url: string, loggingLevel?: number);
+    private logDebug;
     private logWarn;
     private logError;
     getState(): ReaderState;

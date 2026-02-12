@@ -1,0 +1,1 @@
+{"root":["./src/Client.ts","./src/IClient.ts","./src/SimpleClient.ts","./src/TypedEvent.ts","./src/WrapperClient.ts","./src/errorCodes.ts","./src/errors.ts","./src/lib.ts","./src/packet.ts","./src/tests/test-wrapper.ts","./src/tests/test1.ts"],"version":"5.9.3"}
