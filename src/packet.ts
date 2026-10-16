@@ -109,11 +109,43 @@ export const parsePacket = (packet: Uint8Array): {type: ProtokolC2A, data: Uint8
 export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatureBase64:string} => {
     let cardIdBase64: string;
     let signatureBase64: string;
-    
+
     {
         let binary = '';
         let isNonZero = false;
         let idLen = data[0];
+
+
+        // Implementacia GPAY a APAY issued kariet 
+        // Riešime podla idLen, v tomto pripade preudoidentifikator
+        // Prefixom gwallet a apay potom backend bude vediet kam sa pozret
+
+        // Toto je zatial workaround dokym sa cely tento protokol neprepracuje na novo
+
+        if (idLen == 0x20) {    // Toto je identifikacia KachnaKarty v Mobile (GPay)
+
+            binary = 'gwallet-';
+            for (let i = 1; i < 5; i++) {
+                if (!isNonZero && data[i] > 0)
+                    isNonZero = true;
+                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+            }
+
+            return {cardIdBase64: binary, signatureBase64: binary};
+        }
+
+        if (idLen == 0x25) {    // Toto je identifikacia KachnaKarty v Mobile (Apple Pay)
+            binary = 'apay-';
+            for (let i = 1; i < 5; i++) {
+                if (!isNonZero && data[i] > 0)
+                    isNonZero = true;
+                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+            }
+
+            return {cardIdBase64: binary, signatureBase64: binary};
+        }
+
+
         for (let i = 1; i < (1 + idLen); i++) {
             if (!isNonZero && data[i] > 0)
                 isNonZero = true;
@@ -133,7 +165,7 @@ export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatur
                 isNonZero = true;
             binary += String.fromCharCode(data[i]);
         }
-        if (!isNonZero) {
+        if (!isNonZero ) {
             throw new PacketError('Card signature is null', EMPTY_RESPONSE);
         }
         signatureBase64 = window.btoa(binary);

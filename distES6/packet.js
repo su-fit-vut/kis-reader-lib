@@ -55,6 +55,24 @@ export const decodeRfidData = (data) => {
         let binary = '';
         let isNonZero = false;
         let idLen = data[0];
+        if (idLen == 0x20) {
+            binary = 'gwallet-';
+            for (let i = 1; i < 5; i++) {
+                if (!isNonZero && data[i] > 0)
+                    isNonZero = true;
+                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+            }
+            return { cardIdBase64: binary, signatureBase64: binary };
+        }
+        if (idLen == 0x25) {
+            binary = 'apay-';
+            for (let i = 1; i < 5; i++) {
+                if (!isNonZero && data[i] > 0)
+                    isNonZero = true;
+                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+            }
+            return { cardIdBase64: binary, signatureBase64: binary };
+        }
         for (let i = 1; i < (1 + idLen); i++) {
             if (!isNonZero && data[i] > 0)
                 isNonZero = true;

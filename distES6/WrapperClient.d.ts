@@ -30,4 +30,14 @@ export declare class KisReaderWrapperClient implements IKisReaderClient {
         client: IKisReaderClient;
         error: ReaderError | SocketError;
     }>;
+    warnEvent: TypedEvent<{
+        client: IKisReaderClient;
+        msg: string;
+        data: any[];
+    }>;
+    debugEvent: TypedEvent<{
+        client: IKisReaderClient;
+        msg: string;
+        data: any[];
+    }>;
 }

@@ -10,14 +10,17 @@ if (typeof WebSocket === 'undefined') {
     WebSocket = require('ws');
 }
 export class KisReaderClient {
-    constructor(url) {
+    constructor(url, loggingLevel = 0) {
         this.connectedEvent = new TypedEvent();
         this.reconnectingEvent = new TypedEvent();
         this.disconnectedEvent = new TypedEvent();
         this.cardReadEvent = new TypedEvent();
         this.errorEvent = new TypedEvent();
+        this.warnEvent = new TypedEvent();
+        this.debugEvent = new TypedEvent();
         this.pingReceived = true;
         this.uint32Max = (Math.pow(2, 32) - 1);
+        this.loggingLevel = loggingLevel;
         this.url = url;
         this.socket = null;
         this.state = ReaderState.ST_DISCONNECTED;
@@ -31,8 +34,17 @@ export class KisReaderClient {
         this.pingFails = 0;
         this.reconnectAttempts = 0;
     }
-    logWarn(msg) {
-        console.log(msg);
+    logDebug(msg, ...data) {
+        if (this.loggingLevel > 0)
+            return;
+        console.log(msg, data);
+        this.debugEvent.emit({ client: this, msg, data });
+    }
+    logWarn(msg, ...data) {
+        if (this.loggingLevel > 1)
+            return;
+        console.log(msg, data);
+        this.warnEvent.emit({ client: this, msg, data });
     }
     logError(error) {
         console.log(error);
@@ -95,7 +107,7 @@ export class KisReaderClient {
         if (this.state != ReaderState.ST_RECONNECTING)
             this.lastKnownState = this.state;
         this.stopPinging();
-        console.log("Entered onConnectionProblem()\n", {
+        this.logDebug("Entered onConnectionProblem()\n", {
             pingFails: this.pingFails,
             reconnectAttempts: this.reconnectAttempts,
             state: this.state,
