@@ -124,6 +124,13 @@ export class KisReaderWrapperClient implements IKisReaderClient {
     setDisplay2x16(content: string, clearTimeoutMs: number): void {
         this.client.setDisplay2x16(content, clearTimeoutMs);
     }
+    sendSPAYd(spayd: string): void {
+        this.client.sendSPAYd(spayd);
+    }
+    sendSpayd(spayd: string): void {
+        this.client.sendSPAYd(spayd);
+    }
+
     getState(): ReaderState {   
         return this.state;  
     }

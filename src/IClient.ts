@@ -19,6 +19,8 @@ export interface IKisReaderClient {
     modeSingleRead(): void;
     //modeSingleReadAuth(): void;
     setDisplay2x16(content: string, clearTimeoutMs: number): void; // content is 0-2 lines of max 16 chars, separated by \n
+    sendSPAYd(spayd: string): void;
+    sendSpayd?(spayd: string): void;
 
     getState(): ReaderState;
     isReady(): boolean; // is in ST_IDLE, ST_SINGLE_READ or ST_AUTO_READ states

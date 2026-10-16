@@ -72,4 +72,15 @@ export class KisReaderSimpleClient {
         this.client.errorEvent.once(() => onResult(false));
         this.client.connect();
     }
+
+    sendSPAYd(spayd: string): void {
+        if (!this.client)
+            throw new Error("Reader is not connected");
+        this.client.sendSPAYd(spayd);
+    }
+
+    sendSpayd(spayd: string): void {
+        this.sendSPAYd(spayd);
+    }
 }
+

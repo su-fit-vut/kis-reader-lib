@@ -1,5 +1,5 @@
 import * as errorCodes from './errorCodes'
-import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket } from './packet'
+import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket, createSpaydPacket } from './packet'
 import { SocketError, ReaderError } from './errors'
 import { TypedEvent } from "./TypedEvent";
 import { IKisReaderClient, ReaderState } from './IClient';
@@ -284,6 +284,16 @@ export class KisReaderClient implements IKisReaderClient {
             this.displayClearTimeoutId = setTimeout(
                 () => this.setDisplay2x16("", 0),
                 clearTimeoutMs);
+    }
+
+    sendSPAYd(spayd: string): void {
+        this.checkSocketReady();
+        let packet = createSpaydPacket(spayd);
+        this.socket.send(packet);
+    }
+
+    sendSpayd(spayd: string): void {
+        this.sendSPAYd(spayd);
     }
 
     private handleBinaryMessages(msg: ArrayBuffer) {

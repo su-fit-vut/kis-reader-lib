@@ -37,8 +37,8 @@ export enum ProtokolA2C {
     Idle = 0x03,
     // precti ID, posli mi ho, cekej na klic
     SingleAuthenticateId = 0x04,
-    // timto klicem kartu over [16B TDES klíč]
-    SingleAuthenticateKey = 0x05,
+    // Tymto posielame spayd data o QR kodoch do ctecky
+    SendSPAYd = 0x05,
     // zobraz text dvouradkovy
     PrintTextDual = 0x06,
 }
@@ -201,3 +201,17 @@ export const createDisplayPacket = (lineOne: string, lineTwo: string): Uint8Arra
         msg[2 + 16 + i] = lineTwo.charCodeAt(i); // this will emmit modulo-256 for too big codes
     return msg;
 }
+
+// creates a packet containing SPAYD string (QR payment) to be sent to reader
+// byte 0 is 0x05 (ProtokolA2C.SendSPAYd), immediately followed by the SPAYD string bytes (no lead or end mark)
+export const createSpaydPacket = (spayd: string): Uint8Array => {
+    const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+    const rawData = encoder ? encoder.encode(spayd) : Uint8Array.from(Array.from(spayd).map(c => c.charCodeAt(0)));
+    const packet = new Uint8Array(1 + rawData.length);
+    packet[0] = ProtokolA2C.SendSPAYd;
+    packet.set(rawData, 1);
+    return packet;
+}
+
+export const createSendSPAYdPacket = createSpaydPacket;
+
