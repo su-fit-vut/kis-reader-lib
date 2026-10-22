@@ -129,7 +129,7 @@ export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatur
         if (idLen == 0x20) {    // Toto je identifikacia KachnaKarty v Mobile (GPay)
 
             binary = 'gwallet-';
-            for (let i = 1; i < 5; i++) {
+            for (let i = 1; i < 64; i++) {
                 if (!isNonZero && data[i] > 0)
                     isNonZero = true;
                 binary += data[i].toString(16).padStart(2, '0').toUpperCase();
@@ -140,7 +140,7 @@ export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatur
 
         if (idLen == 0x25) {    // Toto je identifikacia KachnaKarty v Mobile (Apple Pay)
             binary = 'apay-';
-            for (let i = 1; i < 5; i++) {
+            for (let i = 1; i < 64; i++) {
                 if (!isNonZero && data[i] > 0)
                     isNonZero = true;
                 binary += data[i].toString(16).padStart(2, '0').toUpperCase();
