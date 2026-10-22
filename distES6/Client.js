@@ -1,5 +1,5 @@
 import * as errorCodes from "./errorCodes.js";
-import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket } from "./packet.js";
+import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket, createSpaydPacket, isMobileCardPacket } from "./packet.js";
 import { SocketError, ReaderError } from "./errors.js";
 import { TypedEvent } from "./TypedEvent.js";
 import { ReaderState } from "./IClient.js";
@@ -182,6 +182,14 @@ export class KisReaderClient {
         if (clearTimeoutMs > 0)
             this.displayClearTimeoutId = setTimeout(() => this.setDisplay2x16("", 0), clearTimeoutMs);
     }
+    sendSPAYd(spayd) {
+        this.checkSocketReady();
+        let packet = createSpaydPacket(spayd);
+        this.socket.send(packet);
+    }
+    sendSpayd(spayd) {
+        this.sendSPAYd(spayd);
+    }
     handleBinaryMessages(msg) {
         let { type, data } = parsePacket(new Uint8Array(msg));
         switch (type) {
@@ -199,11 +207,13 @@ export class KisReaderClient {
                 break;
             }
             case ProtokolC2A.SingleId: {
-                if (this.state !== ReaderState.ST_SINGLE_READ) {
+                if (this.state !== ReaderState.ST_SINGLE_READ && !(this.state === ReaderState.ST_AUTO_READ && isMobileCardPacket(data))) {
                     this.logError(new ReaderError("Unexpected message in current state.", errorCodes.INVALID_RESPONSE));
                     return;
                 }
-                this.state = ReaderState.ST_IDLE;
+                if (this.state === ReaderState.ST_SINGLE_READ) {
+                    this.state = ReaderState.ST_IDLE;
+                }
                 let rfid = decodeRfidData(data);
                 this.cardReadEvent.emit({ client: this, cardData: rfid.signatureBase64 });
                 break;

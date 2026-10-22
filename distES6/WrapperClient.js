@@ -91,6 +91,12 @@ export class KisReaderWrapperClient {
     setDisplay2x16(content, clearTimeoutMs) {
         this.client.setDisplay2x16(content, clearTimeoutMs);
     }
+    sendSPAYd(spayd) {
+        this.client.sendSPAYd(spayd);
+    }
+    sendSpayd(spayd) {
+        this.client.sendSPAYd(spayd);
+    }
     getState() {
         return this.state;
     }

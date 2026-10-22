@@ -76,6 +76,21 @@ export const createPacket = (type: ProtokolA2C | ProtokolC2A, data?: ArrayBuffer
     return packet
 }
 
+const GWALLET_PREFIX = [0x67, 0x77, 0x61, 0x6C, 0x6C, 0x65, 0x74, 0x2D]; // "gwallet-"
+const APAY_PREFIX = [0x61, 0x70, 0x61, 0x79, 0x2D]; // "apay-"
+
+const hasPrefix = (data: Uint8Array, prefix: number[]): boolean => {
+    if (data.length <= prefix.length) return false;
+    for (let i = 0; i < prefix.length; i++) {
+        if (data[i] !== prefix[i]) return false;
+    }
+    return true;
+}
+
+export const isMobileCardPacket = (data: Uint8Array): boolean => {
+    return hasPrefix(data, GWALLET_PREFIX) || hasPrefix(data, APAY_PREFIX);
+}
+
 export const checkPacket = (packet: Uint8Array) => {
     // tahhle funkce není tak podstatná,
     // protože při websocket spojení (a TCP už asi nepoužijeme) netřeba kontrolovat intro/outro byte
@@ -89,6 +104,9 @@ export const checkPacket = (packet: Uint8Array) => {
     // ale hádám, že nejpozději na nějakém rozhraní našeho kodu, kde by ta výjimka probulala dál,
     // budeme muset tu výjimku chytnout a zavolat nějaký callback a uvést ten objekt do rozumného stavu (ST_ERROR např)
     // a případně zahájit proces znovu připojování
+
+    if (isMobileCardPacket(packet))
+        return;
 
     if (packet[1] !== 0x6E || packet[34] !== 0xE6)
         throw new PacketError('Invalid packet header / footer', INVALID_FORMAT)
@@ -104,6 +122,10 @@ export const checkPacket = (packet: Uint8Array) => {
 export const parsePacket = (packet: Uint8Array): {type: ProtokolC2A, data: Uint8Array } => {
     checkPacket(packet);
 
+    if (isMobileCardPacket(packet)) {
+        return {type: ProtokolC2A.SingleId, data: packet.slice()};
+    }
+
     let typeNum = packet[0];
     let data = packet.slice(2, 2 + 32); //copy the data, so it is aligned for multi-byte operations
 
@@ -113,6 +135,14 @@ export const parsePacket = (packet: Uint8Array): {type: ProtokolC2A, data: Uint8
 export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatureBase64:string} => {
     let cardIdBase64: string;
     let signatureBase64: string;
+
+    if (isMobileCardPacket(data)) {
+        let binary = '';
+        for (let i = 0; i < data.length && data[i] !== 0; i++) {
+            binary += String.fromCharCode(data[i]);
+        }
+        return {cardIdBase64: binary, signatureBase64: binary};
+    }
 
     {
         let binary = '';
@@ -126,21 +156,16 @@ export const decodeRfidData = (data: Uint8Array): {cardIdBase64:string, signatur
 
         // Toto je zatial workaround dokym sa cely tento protokol neprepracuje na novo
 
-        if (idLen == 0x20) {    // Toto je identifikacia KachnaKarty v Mobile (GPay)
-
-            binary = 'gwallet-';
-            for (let i = 1; i < 64; i++) {
-                if (!isNonZero && data[i] > 0)
-                    isNonZero = true;
-                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+        if (idLen == 0x20 || idLen == 0x25) {    // Toto je identifikacia KachnaKarty v Mobile (GPay / Apple Pay)
+            binary = idLen == 0x20 ? 'gwallet-' : 'apay-';
+            let tokenBytes = 4;
+            for (let i = 5; i <= 16 && i < data.length; i++) {
+                if (data[i] !== 0) {
+                    tokenBytes = 16;
+                    break;
+                }
             }
-
-            return {cardIdBase64: binary, signatureBase64: binary};
-        }
-
-        if (idLen == 0x25) {    // Toto je identifikacia KachnaKarty v Mobile (Apple Pay)
-            binary = 'apay-';
-            for (let i = 1; i < 64; i++) {
+            for (let i = 1; i < 1 + tokenBytes && i < data.length; i++) {
                 if (!isNonZero && data[i] > 0)
                     isNonZero = true;
                 binary += data[i].toString(16).padStart(2, '0').toUpperCase();

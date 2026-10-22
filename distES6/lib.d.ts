@@ -1,6 +1,10 @@
+import { KisReaderClient } from "./Client";
 export { KisReaderClient } from "./Client";
 export { KisReaderWrapperClient } from "./WrapperClient";
 export { KisReaderSimpleClient } from "./SimpleClient";
 export { ReaderState } from "./IClient";
+export { createSpaydPacket, createSendSPAYdPacket } from "./packet";
 export declare const readOneCard: (readerUri: string, onData: (data: string) => void, onError: (err: any) => void, onConnect?: () => void) => (() => void);
 export declare const testReader: (readerUri: string, onResult: (success: boolean) => void) => void;
+export declare const sendSPAYd: (target: KisReaderClient | WebSocket, spayd: string) => void;
+export declare const sendSpayd: (target: KisReaderClient | WebSocket, spayd: string) => void;

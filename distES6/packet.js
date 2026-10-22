@@ -6,9 +6,10 @@ export var ProtokolA2C;
     ProtokolA2C[ProtokolA2C["AutoReadBegin"] = 1] = "AutoReadBegin";
     ProtokolA2C[ProtokolA2C["SingleRead"] = 2] = "SingleRead";
     ProtokolA2C[ProtokolA2C["Idle"] = 3] = "Idle";
-    ProtokolA2C[ProtokolA2C["SingleAuthenticateId"] = 4] = "SingleAuthenticateId";
     ProtokolA2C[ProtokolA2C["SingleAuthenticateKey"] = 5] = "SingleAuthenticateKey";
+    ProtokolA2C[ProtokolA2C["SingleAuthenticateId"] = 4] = "SingleAuthenticateId";
     ProtokolA2C[ProtokolA2C["PrintTextDual"] = 6] = "PrintTextDual";
+    ProtokolA2C[ProtokolA2C["SendSPAYd"] = 7] = "SendSPAYd";
 })(ProtokolA2C || (ProtokolA2C = {}));
 export var ProtokolC2A;
 (function (ProtokolC2A) {
@@ -32,7 +33,23 @@ export const createPacket = (type, data) => {
     }
     return packet;
 };
+const GWALLET_PREFIX = [0x67, 0x77, 0x61, 0x6C, 0x6C, 0x65, 0x74, 0x2D];
+const APAY_PREFIX = [0x61, 0x70, 0x61, 0x79, 0x2D];
+const hasPrefix = (data, prefix) => {
+    if (data.length <= prefix.length)
+        return false;
+    for (let i = 0; i < prefix.length; i++) {
+        if (data[i] !== prefix[i])
+            return false;
+    }
+    return true;
+};
+export const isMobileCardPacket = (data) => {
+    return hasPrefix(data, GWALLET_PREFIX) || hasPrefix(data, APAY_PREFIX);
+};
 export const checkPacket = (packet) => {
+    if (isMobileCardPacket(packet))
+        return;
     if (packet[1] !== 0x6E || packet[34] !== 0xE6)
         throw new PacketError('Invalid packet header / footer', INVALID_FORMAT);
     if (packet.length !== 35)
@@ -44,6 +61,9 @@ export const checkPacket = (packet) => {
 };
 export const parsePacket = (packet) => {
     checkPacket(packet);
+    if (isMobileCardPacket(packet)) {
+        return { type: ProtokolC2A.SingleId, data: packet.slice() };
+    }
     let typeNum = packet[0];
     let data = packet.slice(2, 2 + 32);
     return { type: typeNum, data };
@@ -51,22 +71,27 @@ export const parsePacket = (packet) => {
 export const decodeRfidData = (data) => {
     let cardIdBase64;
     let signatureBase64;
+    if (isMobileCardPacket(data)) {
+        let binary = '';
+        for (let i = 0; i < data.length && data[i] !== 0; i++) {
+            binary += String.fromCharCode(data[i]);
+        }
+        return { cardIdBase64: binary, signatureBase64: binary };
+    }
     {
         let binary = '';
         let isNonZero = false;
         let idLen = data[0];
-        if (idLen == 0x20) {
-            binary = 'gwallet-';
-            for (let i = 1; i < 5; i++) {
-                if (!isNonZero && data[i] > 0)
-                    isNonZero = true;
-                binary += data[i].toString(16).padStart(2, '0').toUpperCase();
+        if (idLen == 0x20 || idLen == 0x25) {
+            binary = idLen == 0x20 ? 'gwallet-' : 'apay-';
+            let tokenBytes = 4;
+            for (let i = 5; i <= 16 && i < data.length; i++) {
+                if (data[i] !== 0) {
+                    tokenBytes = 16;
+                    break;
+                }
             }
-            return { cardIdBase64: binary, signatureBase64: binary };
-        }
-        if (idLen == 0x25) {
-            binary = 'apay-';
-            for (let i = 1; i < 5; i++) {
+            for (let i = 1; i < 1 + tokenBytes && i < data.length; i++) {
                 if (!isNonZero && data[i] > 0)
                     isNonZero = true;
                 binary += data[i].toString(16).padStart(2, '0').toUpperCase();
@@ -121,4 +146,13 @@ export const createDisplayPacket = (lineOne, lineTwo) => {
         msg[2 + 16 + i] = lineTwo.charCodeAt(i);
     return msg;
 };
+export const createSpaydPacket = (spayd) => {
+    const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+    const rawData = encoder ? encoder.encode(spayd) : Uint8Array.from(Array.from(spayd).map(c => c.charCodeAt(0)));
+    const packet = new Uint8Array(1 + rawData.length);
+    packet[0] = ProtokolA2C.SendSPAYd;
+    packet.set(rawData, 1);
+    return packet;
+};
+export const createSendSPAYdPacket = createSpaydPacket;
 //# sourceMappingURL=packet.js.map

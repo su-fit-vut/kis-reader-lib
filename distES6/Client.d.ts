@@ -56,6 +56,8 @@ export declare class KisReaderClient implements IKisReaderClient {
     modeSingleReadAuth(): void;
     displayClearTimeoutId: any;
     setDisplay2x16(content: string, clearTimeoutMs: number): void;
+    sendSPAYd(spayd: string): void;
+    sendSpayd(spayd: string): void;
     private handleBinaryMessages;
     pingCode: number;
     pingPeriodIdx: number;

@@ -1,5 +1,5 @@
 import * as errorCodes from './errorCodes'
-import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket, createSpaydPacket } from './packet'
+import { ProtokolA2C, ProtokolC2A, createPacket, createPingPacket, decodePongData, parsePacket, decodeRfidData, createDisplayPacket, createSpaydPacket, isMobileCardPacket } from './packet'
 import { SocketError, ReaderError } from './errors'
 import { TypedEvent } from "./TypedEvent";
 import { IKisReaderClient, ReaderState } from './IClient';
@@ -314,11 +314,13 @@ export class KisReaderClient implements IKisReaderClient {
                 break;
             }
             case ProtokolC2A.SingleId: {
-                if (this.state !== ReaderState.ST_SINGLE_READ) {
+                if (this.state !== ReaderState.ST_SINGLE_READ && !(this.state === ReaderState.ST_AUTO_READ && isMobileCardPacket(data))) {
                     this.logError(new ReaderError("Unexpected message in current state.", errorCodes.INVALID_RESPONSE));
                     return;
                 }
-                this.state = ReaderState.ST_IDLE; // adjust the state
+                if (this.state === ReaderState.ST_SINGLE_READ) {
+                    this.state = ReaderState.ST_IDLE; // adjust the state
+                }
 
                 let rfid = decodeRfidData(data);
                 this.cardReadEvent.emit({client: this, cardData:rfid.signatureBase64});
